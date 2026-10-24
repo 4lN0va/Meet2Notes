@@ -138,7 +138,7 @@
     }
     let response;
     try {
-      response = await fetch(path, { ...options, headers });
+      response = await fetch(path, { ...options, headers, cache: "no-store" });
     } catch (error) {
       timingLog("API request failed", {
         method: options.method || "GET", path,
