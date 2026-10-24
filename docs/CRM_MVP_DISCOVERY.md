@@ -2,8 +2,8 @@
 
 - 日期：2026-10-24
 - 調查基準：`estebanstifli/Meet2Notes` `main` @ `e05c0f0`（"fix: keep GGUF metadata inspection optional in minimal installations"），版本 0.9.0
-- 工作目錄：`D:\CRM_Project\Meet2Notes`（全新 clone，原始工作目錄乾淨，未覆蓋任何既有變更）
-- 目的：在既有 Meet2Notes 上實作「CRM 導向會議工作流程 MVP」前的 repository 調查，並評估使用者提供之驗證前端（`E:\Default\Desktop\handy-integration-verification-tool`）作為 CRM 替身的可行性。
+- 工作目錄：本倉庫工作複本（全新 clone，原始工作目錄乾淨，未覆蓋任何既有變更）
+- 目的：在既有 Meet2Notes 上實作「CRM 導向會議工作流程 MVP」前的 repository 調查，並評估使用者提供之驗證前端（`handy-integration-verification-tool`（使用者本機既有工具））作為 CRM 替身的可行性。
 - 語言：台灣繁體中文（zh-TW）
 
 ---
@@ -23,7 +23,7 @@
 - `git clone https://github.com/estebanstifli/Meet2Notes.git` → `git status/branch/log/remote` 檢查（全新 clone，狀態乾淨）。
 - 閱讀：`README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`、`pyproject.toml`、`.env.example`、`docs/`（architecture、audio-capture、privacy、webhooks、localization、plugins、mcp、updating 等；repository 無獨立 `API.md` 與 "safe updates" 文件，對應文件為 `docs/updating.md`）、`install.ps1`、`install.sh`、`start.bat`。
 - 逐層掃描 `src/local_meeting_ai/`（domain / application / adapters / infrastructure / api / web / mcp / plugins）與 `tests/`。
-- 另行調查使用者提供的 `E:\Default\Desktop\handy-integration-verification-tool`（原始碼、README、Rust 整合片段、Python 模擬器、git 狀態）。
+- 另行調查使用者提供的 `handy-integration-verification-tool`（使用者本機既有工具）（原始碼、README、Rust 整合片段、Python 模擬器、git 狀態）。
 - 依賴安裝與測試執行結果見 §12。
 
 ## 2. 現有架構圖
@@ -185,7 +185,7 @@ MCP gateway（mcp/）：唯讀工具（list_meetings、get_transcript、get_summ
 
 ## 9. 驗證前端（handy-integration-verification-tool）分析
 
-位置：`E:\Default\Desktop\handy-integration-verification-tool`（Next.js 16 + React 19，MIT；綁定 `127.0.0.1:8765`；無資料庫，事件存記憶體 ring buffer 100 筆）。該 repo 有使用者未提交的修改（`package.json`、`src/app/layout.tsx`、`tools/local_bridge/README.md`），**未經確認不得覆蓋**。
+位置：`handy-integration-verification-tool`（使用者本機既有工具）（Next.js 16 + React 19，MIT；綁定 `127.0.0.1:8765`；無資料庫，事件存記憶體 ring buffer 100 筆）。該 repo 有使用者未提交的修改（`package.json`、`src/app/layout.tsx`、`tools/local_bridge/README.md`），**未經確認不得覆蓋**。
 
 ### 9.1 現有契約
 
@@ -273,7 +273,7 @@ $ ./.venv/Scripts/python.exe -m pytest -q
 > **2026-10-24 決議**：使用者已回覆全部六項——(1) 另建 Meet2Notes 專用驗證前端，上傳內容含逐字稿與摘要（JSON：文字、講者、時間戳記）；(2) 不修改原始驗證前端，於工作區複製副本實作 mock CRM；(3) 本階段僅預留接口、對上 mock CRM 驗證即停；(4) mock CRM 用埠 8766；(5) 接受 Python 3.14，必要時降版於虛擬環境；(6) 一切 git commit 僅留在本地。實作結果見 `docs/CRM_INTEGRATION.md`。
 
 1. **整合架構**：最終把摘要送進 CRM 的是 Meet2Notes（本規格）還是 Handy（驗證前端目前契約的對象），或兩者並行（不同工作流）？這決定 Phase 1 狀態機要不要接 Handy 的 session_id/transcript 事件。
-2. **驗證前端擴充授權**：同意我依 §9.3-2 擴充 `E:\Default\Desktop\handy-integration-verification-tool`（新增 `/api/crm/*` mock 端點 + dashboard 錯誤注入）嗎？該 repo 有未提交變更，我會先 branch 再動工，不覆蓋既有修改。
+2. **驗證前端擴充授權**：同意我依 §9.3-2 擴充 `handy-integration-verification-tool`（使用者本機既有工具）（新增 `/api/crm/*` mock 端點 + dashboard 錯誤注入）嗎？該 repo 有未提交變更，我會先 branch 再動工，不覆蓋既有修改。
 3. **CRM 契約**：§10 清單何時能提供？在那之前自動化測試全部以 mock/fake 進行，不標記真實 CRM 驗收。
 4. **埠配置**：同意 mock CRM 用 8766（或你指定埠）、Meet2Notes 維持 8765？
 5. **Python 版本**：本機僅 3.14.6；是否需要我引導安裝 3.12/3.13（`install.ps1` 預期版本），或接受 3.14 作為開發驗證環境？

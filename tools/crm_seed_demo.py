@@ -3,14 +3,15 @@
 Run from the Meet2Notes repo root with the project venv:
     ./.venv/Scripts/python.exe tools/crm_seed_demo.py
 
-Creates D:\\CRM_Project\\.m2n-crm-verify-data (AppPaths data dir) with one
-meeting, two named speakers, four final zh-TW transcript segments and one
-completed structured summary. Safe to re-run: it aborts when the demo meeting
-already exists.
+Creates a demo data directory (default `<repo>/.demo-data`, override with
+M2N_DEMO_DATA_DIR) with one meeting, two named speakers, four final zh-TW
+transcript segments and one completed structured summary. Safe to re-run:
+it aborts when the demo meeting already exists.
 """
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,10 @@ from local_meeting_ai.bootstrap import build_container
 from local_meeting_ai.config import AppSettings
 from local_meeting_ai.domain.entities import SegmentDraft
 
-DATA_DIR = Path(r"D:\CRM_Project\.m2n-crm-verify-data")
+DATA_DIR = Path(
+    os.environ.get("M2N_DEMO_DATA_DIR")
+    or Path(__file__).resolve().parents[1] / ".demo-data"
+)
 DEMO_TITLE = "CRM 整合驗證會談"
 
 SEGMENTS: list[tuple[int, int, str, str]] = [

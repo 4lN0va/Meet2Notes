@@ -62,12 +62,12 @@ Mock CRM（crm-integration-verification-tool，Next.js，127.0.0.1:8766）
 
 ## 4. Mock CRM（驗證替身）
 
-位置：`D:\CRM_Project\crm-integration-verification-tool`（自
+位置：repo 旁的 `crm-integration-verification-tool/`（自
 handy-integration-verification-tool 複製，原始工具未更動）。
 
 ```powershell
 # 啟動（第一次先 npm install；改程式後先 npm run build）
-cd D:\CRM_Project\crm-integration-verification-tool
+cd <path-to>/crm-integration-verification-tool
 npx next start -H 127.0.0.1 -p 8766
 # 開啟 dashboard：http://127.0.0.1:8766/crm
 ```
@@ -98,11 +98,11 @@ node tools/local_bridge/test_crm_backend.mjs --base-url http://127.0.0.1:8766
 # 1. 啟動 mock CRM（上節），確認 http://127.0.0.1:8766/crm 可開啟
 
 # 2. 種子資料（一次性；meeting id 1 = 「CRM 整合驗證會談」）
-cd D:\CRM_Project\Meet2Notes
+cd <path-to>/Meet2Notes
 .\.venv\Scripts\python.exe tools\crm_seed_demo.py
 
 # 3. 啟動 Meet2Notes（CRM 指向 mock）
-$env:M2N_DATA_DIR="D:\CRM_Project\.m2n-crm-verify-data"
+$env:M2N_DATA_DIR="<path-to>/.demo-data"
 $env:M2N_OPEN_BROWSER="false"
 $env:M2N_CRM_BASE_URL="http://127.0.0.1:8766"
 .\.venv\Scripts\python.exe -m local_meeting_ai --no-browser
