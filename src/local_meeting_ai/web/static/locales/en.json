@@ -1468,7 +1468,11 @@
     "9 sections": "9 sections",
     "Local speaker analysis with a continuous speaker cache for long meetings.": "Local speaker analysis with a continuous speaker cache for long meetings.",
     "Up to 8 speakers, detected automatically. CPU or CUDA. Uses a private, pinned preview runtime. Saved voice matching is supported.": "Up to 8 speakers, detected automatically. CPU or CUDA. Uses a private, pinned preview runtime. Saved voice matching is supported.",
-    "Available for this engine: CPU, CUDA, COREML.": "Available for this engine: CPU, CUDA, COREML."
+    "Available for this engine: CPU, CUDA, COREML.": "Available for this engine: CPU, CUDA, COREML.",
+    "Assistant permissions": "Assistant permissions",
+    "Interaction only": "Interaction only",
+    "Edit transcript": "Edit transcript",
+    "Full access": "Full access"
   },
   "meetings.saved_count": {
     "one": "saved meeting",
@@ -1667,5 +1671,11 @@
   "import.supported_formats": "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WebM, MOV",
   "transcript.follow_timeline": "Follow timeline",
   "transcript.video_stored_locally": "Meeting video · stored locally",
-  "transcript.audio_stored_locally": "Meeting audio · stored locally"
+  "transcript.audio_stored_locally": "Meeting audio · stored locally",
+  "assistant.permission_label": "Assistant permissions",
+  "assistant.permission_read": "Interaction only",
+  "assistant.permission_edit": "Edit transcript",
+  "assistant.permission_full": "Full access",
+  "assistant.edits_applied": "Applied {count} edit(s) to this meeting",
+  "assistant.saved_locally": "Assistant settings saved locally."
 }

@@ -11,7 +11,15 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from local_meeting_ai.domain.entities import Job
+from local_meeting_ai.application.assistant_tools import (
+    AppliedEdit,
+    AssistantToolExecutor,
+    action_results_turn,
+    apply_action_block,
+    normalize_permission,
+    permission_allows_edits,
+)
+from local_meeting_ai.domain.entities import Job, SummaryResult
 from local_meeting_ai.domain.enums import JobType
 from local_meeting_ai.domain.errors import NotFoundError, ValidationError
 from local_meeting_ai.domain.protocols import (
@@ -718,11 +726,15 @@ class PromptService:
         summary_engine: SummaryEngine,
         preferences: SettingsRepository,
         summaries: SummaryRepository,
+        meetings: Any = None,
+        transcriptions: Any = None,
     ) -> None:
         self.rag = rag
         self.summary_engine = summary_engine
         self.preferences = preferences
         self.summaries = summaries
+        self._meetings = meetings
+        self._transcriptions = transcriptions
 
     async def ask(
         self,
@@ -850,14 +862,27 @@ class PromptService:
         on_sources = getattr(progress, "on_sources", None)
         if callable(on_sources):
             on_sources(citations)
+        applied_edits: list[AppliedEdit] = []
+        executor = self._executor_for(meeting_id)
+        if executor is not None:
+            context = context + "\n\n" + executor.tool_instructions()
         result = await self.summary_engine.summarize(
             context,
             config,
             progress or _NoopProgress(),
             is_cancelled,
         )
-        return {
+        if executor is not None:
+            result, applied_edits = await self._run_tool_loop(
+                executor, result, config, context, progress, is_cancelled
+            )
+        answer_payload = {
             "answer": result.content_markdown,
+            "applied_edits": [
+                {"action": edit.action, "detail": edit.detail,
+                 "before": edit.before, "after": edit.after}
+                for edit in applied_edits
+            ],
             "citations": citations,
             "sources": sources,
             "retrieval": retrieval,
@@ -879,6 +904,113 @@ class PromptService:
                 "reserved_output_tokens": output_tokens,
             },
         }
+        return answer_payload
+
+    def _executor_for(self, meeting_id: int | None) -> AssistantToolExecutor | None:
+        """Builds the tool executor when the permission level allows edits.
+
+        Falls back to read-only (no tools) when the meeting has no completed
+        transcript yet or the assistant dependencies are unavailable.
+        """
+        if meeting_id is None or self._meetings is None or self._transcriptions is None:
+            return None
+        permission = normalize_permission(
+            self.preferences.get_all().get("assistant_permission")
+        )
+        if not permission_allows_edits(permission):
+            return None
+        try:
+            return AssistantToolExecutor(
+                permission=permission,
+                meeting_id=meeting_id,
+                meetings=self._meetings,
+                transcriptions=self._transcriptions,
+                summaries=self.summaries,
+            )
+        except (ValidationError, NotFoundError):
+            return None
+
+    async def _run_tool_loop(
+        self,
+        executor: AssistantToolExecutor,
+        result: Any,
+        config: dict[str, Any],
+        context: str,
+        progress: ProgressReporter | None,
+        is_cancelled: CancellationCheck,
+    ) -> tuple[Any, list[AppliedEdit]]:
+        """Runs the ACTIONS protocol loop after the first completion.
+
+        Each round parses an optional '###ACTIONS###' block from the reply,
+        applies the allowed edits and feeds the results back to the model.
+        Invalid blocks get one corrective round. Hard cap: 4 completions.
+        """
+        applied: list[AppliedEdit] = []
+        seen_signatures: set[str] = set()
+        history = str(config.get("prompt_history") or "")
+        for _round in range(3):
+            try:
+                clean, actions = executor.parse_reply(result.content_markdown or "")
+            except ValidationError as error:
+                history += (
+                    "\nASSISTANT: " + str(result.content_markdown)
+                    + "\nUSER: Your action block was invalid (" + str(error) + "). "
+                    "Reply again with a corrected action block or without one."
+                )
+                config = {**config, "prompt_history": history}
+                result = await self.summary_engine.summarize(
+                    context, config, progress or _NoopProgress(), is_cancelled
+                )
+                continue
+            if not actions:
+                if applied:
+                    result = SummaryResult(content_markdown=clean)
+                return result, applied
+            signatures = {json.dumps(action, sort_keys=True) for action in actions}
+            if signatures.issubset(seen_signatures):
+                # The model repeated actions that already ran; treat the task
+                # as complete instead of applying them a second time.
+                result = SummaryResult(content_markdown=clean)
+                return result, applied
+            seen_signatures.update(signatures)
+            try:
+                round_applied = apply_action_block(executor, actions)
+            except ValidationError as error:
+                history += (
+                    "\nASSISTANT: " + str(result.content_markdown)
+                    + "\nUSER: The actions were rejected: " + str(error) + ". "
+                    "Correct them and reply again, or answer without actions."
+                )
+                config = {**config, "prompt_history": history}
+                result = await self.summary_engine.summarize(
+                    context, config, progress or _NoopProgress(), is_cancelled
+                )
+                continue
+            applied.extend(round_applied)
+            results_turn = action_results_turn(round_applied)["content"]
+            history += (
+                "\nASSISTANT: " + clean
+                + "\nUSER: " + results_turn
+                + "\n(All edits are saved. If the request is complete, reply with "
+                "your final answer now; otherwise continue with more actions.)"
+            )
+            config = {**config, "prompt_history": history}
+            result = await self.summary_engine.summarize(
+                context, config, progress or _NoopProgress(), is_cancelled
+            )
+            try:
+                clean, actions = executor.parse_reply(result.content_markdown or "")
+            except ValidationError:
+                actions = []
+            if not actions:
+                return SummaryResult(content_markdown=clean), applied
+        # Round budget exhausted: never leak a raw ACTIONS block to the user.
+        try:
+            clean, _ = executor.parse_reply(result.content_markdown or "")
+            result = SummaryResult(content_markdown=clean)
+        except ValidationError:
+            pass
+        return result, applied
 
     def _attachment_context(
         self,

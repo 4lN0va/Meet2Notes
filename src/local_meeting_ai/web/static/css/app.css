@@ -48,6 +48,18 @@ select {
   font: inherit;
 }
 
+/* Unified text-field look (matches the RAG search test input):
+   panel background, hairline border, rounded corners. Checkbox, radio,
+   range and file inputs keep their native/custom treatment. */
+input:where([type="text"], [type="number"], [type="search"], [type="url"], [type="password"], [type="email"], [type="tel"], [type="datetime-local"], [type="date"], [type="time"], :not([type])),
+select,
+textarea {
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;

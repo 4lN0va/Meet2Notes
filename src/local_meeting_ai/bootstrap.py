@@ -431,6 +431,8 @@ def build_container(
         summary_engine=resolved_summary,
         preferences=preferences,
         summaries=summaries,
+        meetings=meetings,
+        transcriptions=transcriptions,
     )
 
     return Container(

@@ -1468,7 +1468,11 @@
     "9 sections": "9 個章節",
     "Local speaker analysis with a continuous speaker cache for long meetings.": "本機講者分析，具備適用於長會議的連續講者快取。",
     "Up to 8 speakers, detected automatically. CPU or CUDA. Uses a private, pinned preview runtime. Saved voice matching is supported.": "最多 8 位講者，自動偵測。支援 CPU 或 CUDA。使用私人、固定版本的預覽執行環境。支援已儲存聲紋比對。",
-    "Available for this engine: CPU, CUDA, COREML.": "此引擎可用：CPU、CUDA、CoreML。"
+    "Available for this engine: CPU, CUDA, COREML.": "此引擎可用：CPU、CUDA、CoreML。",
+    "Assistant permissions": "助理權限",
+    "Interaction only": "僅互動回答",
+    "Edit transcript": "可編輯逐字稿",
+    "Full access": "完全權限"
   },
   "meetings.saved_count": {
     "one": "場已儲存會議",
@@ -1667,5 +1671,11 @@
   "import.supported_formats": "WAV、MP3、M4A、FLAC、OGG、AAC、MP4、MKV、WebM、MOV",
   "transcript.follow_timeline": "跟隨播放進度",
   "transcript.video_stored_locally": "會議影片 · 僅存於本機",
-  "transcript.audio_stored_locally": "會議音訊 · 僅存於本機"
+  "transcript.audio_stored_locally": "會議音訊 · 僅存於本機",
+  "assistant.permission_label": "助理權限",
+  "assistant.permission_read": "僅互動回答",
+  "assistant.permission_edit": "可編輯逐字稿",
+  "assistant.permission_full": "完全權限",
+  "assistant.edits_applied": "已對這場會議套用 {count} 筆編輯",
+  "assistant.saved_locally": "助理設定已儲存在本機。"
 }

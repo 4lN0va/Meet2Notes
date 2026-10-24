@@ -10,6 +10,7 @@
   const send = document.querySelector("#post-meeting-assistant-send");
   const messages = document.querySelector("#post-meeting-assistant-messages");
   const meetingSelect = document.querySelector("#post-meeting-assistant-meeting");
+  const permissionSelect = document.querySelector("#assistant-permission");
   const toggle = document.querySelector("#post-meeting-assistant-toggle");
   const dragHandle = document.querySelector("#post-meeting-assistant-drag-handle");
   const resizeHandle = document.querySelector("#post-meeting-assistant-resize");
@@ -27,6 +28,29 @@
   let contextGeneration = 0;
   let contextReady = Promise.resolve();
   const storageKey = "meet2notes.postMeetingAssistant.v2";
+
+  async function initPermissionSelect() {
+    if (!permissionSelect) return;
+    try {
+      const prefs = await api("/api/settings");
+      permissionSelect.value = prefs.assistant_permission || "read";
+    } catch {
+      permissionSelect.value = "read";
+    }
+    permissionSelect.addEventListener("change", async () => {
+      try {
+        await api("/api/settings", {
+          method: "PUT",
+          body: JSON.stringify({ assistant_permission: permissionSelect.value }),
+        });
+        toast(t("assistant.saved_locally"));
+      } catch (error) {
+        toast(error.message, "error");
+        permissionSelect.value = "read";
+      }
+    });
+  }
+  void initPermissionSelect();
 
   function sourceTime(milliseconds) {
     const seconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
@@ -344,6 +368,10 @@
       activity.finish();
       pending.remove();
       appendMessage("assistant", result.answer, result.sources || [], true, result.citations || []);
+      const appliedEdits = Array.isArray(result.applied_edits) ? result.applied_edits : [];
+      if (appliedEdits.length) {
+        toast(t("assistant.edits_applied", { count: appliedEdits.length }));
+      }
       history.push({ role: "user", content: value }, { role: "assistant", content: result.answer });
       const usage = result.context_usage || {};
       const used = Number(usage.estimated_total_input_tokens || 0);

@@ -26,6 +26,14 @@
       <option value="">All meetings</option>
     </select>
   </div>
+  <div class="post-meeting-assistant-scope">
+    <label for="assistant-permission" data-i18n="assistant.permission_label">Assistant permissions</label>
+    <select id="assistant-permission" aria-label="Assistant permissions">
+      <option value="read" data-i18n="assistant.permission_read">Interaction only</option>
+      <option value="edit_transcript" data-i18n="assistant.permission_edit">Edit transcript</option>
+      <option value="full" data-i18n="assistant.permission_full">Full access</option>
+    </select>
+  </div>
   <div class="assistant-quick-actions">
     <select id="assistant-action" aria-label="Quick action"><option value="">Quick actions</option></select>
     <button type="button" id="assistant-action-use" disabled>Use</button>

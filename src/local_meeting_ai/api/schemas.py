@@ -366,6 +366,7 @@ class PreferenceUpdate(BaseModel):
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     confirm_permanent_delete: bool | None = None
     default_summary_template_id: int | None = Field(default=None, ge=1)
+    assistant_permission: Literal["read", "edit_transcript", "full"] | None = None
     transcription_engine: str = Field(default="faster-whisper", max_length=80)
     automatic_model_memory: bool = False
     live_transcription_engine: str = Field(default="faster-whisper", max_length=80)
@@ -391,6 +392,7 @@ class PreferenceResponse(BaseModel):
     retention_days: int | None = None
     confirm_permanent_delete: bool = True
     default_summary_template_id: int | None = None
+    assistant_permission: Literal["read", "edit_transcript", "full"] = "read"
     transcription_engine: str = "faster-whisper"
     automatic_model_memory: bool = False
     live_transcription_engine: str = "faster-whisper"

@@ -316,6 +316,29 @@
   overflow: hidden;
 }
 
+/* Let users scroll the transcript with the wheel and show a scrollbar.
+   overflow:hidden still allowed programmatic scrollIntoView, but blocked
+   wheel scrolling entirely. */
+#meeting-tab-transcript {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong, #c7d0dd) transparent;
+}
+
+#meeting-tab-transcript::-webkit-scrollbar {
+  width: 9px;
+}
+
+#meeting-tab-transcript::-webkit-scrollbar-thumb {
+  background: var(--line-strong, #c7d0dd);
+  border-radius: 999px;
+}
+
+#meeting-tab-transcript::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .meeting-tab-panel.active {
   display: flex;
   flex-direction: column;
