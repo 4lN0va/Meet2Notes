@@ -91,7 +91,6 @@
     "Model preset": "Modelo predefinido",
     "Send complete attachments to remote models. Local windows grow within model and memory limits. The configured window is the starting size; disabling this option makes it a fixed limit.": "Envía los adjuntos completos a los modelos remotos. El contexto local crece dentro de los límites del modelo y la memoria. El valor configurado es el tamaño inicial; al desactivar esta opción se convierte en un límite fijo.",
     "Size context for the request.": "Ajusta el contexto a la petición.",
-
     "Bonsai automatic context": "Contexto automático de Bonsai",
     "Native Bonsai only. Grow from the configured window as needed, up to 262,144 tokens including the answer. Keep the model loaded to reuse its cache.": "Solo Bonsai nativo. Amplía la ventana configurada según sea necesario, hasta 262.144 tokens incluyendo la respuesta. Mantén el modelo cargado para reutilizar su caché.",
     "Add or merge this JSON server entry into Claude Desktop’s configuration file.": "Añade o combina esta entrada JSON del servidor en el archivo de configuración de Claude Desktop.",
@@ -1355,7 +1354,8 @@
     "Audio profile for this computer": "Perfil de audio para este equipo",
     "Install and use recommended profile": "Instalar y usar el perfil recomendado",
     "Release idle models between processing stages": "Liberar modelos inactivos entre fases de procesamiento",
-    "Use custom settings": "Configuración personalizada"
+    "Use custom settings": "Configuración personalizada",
+    "New Transcription": "Nueva transcripción"
   },
   "meetings.saved_count": {
     "one": "reuni?n guardada",
@@ -1546,5 +1546,10 @@
   "audio.installed": "Perfil de audio instalado y seleccionado.",
   "audio.working": "En curso",
   "settings.llm_preset": "Modelo preestablecido",
-  "settings.llm_preset_help": "Elige un modelo o Custom. Usa una clave API del proveedor seleccionado."
+  "settings.llm_preset_help": "Elige un modelo o Custom. Usa una clave API del proveedor seleccionado.",
+  "nav.minimize_sidebar": "Minimizar barra lateral",
+  "brand.home": "Meet2Notes inicio",
+  "nav.main": "Navegación principal",
+  "nav.open": "Abrir navegación",
+  "import.supported_formats": "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WebM, MOV"
 }

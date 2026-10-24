@@ -91,7 +91,6 @@
     "Model preset": "Model preset",
     "Send complete attachments to remote models. Local windows grow within model and memory limits. The configured window is the starting size; disabling this option makes it a fixed limit.": "Send complete attachments to remote models. Local windows grow within model and memory limits. The configured window is the starting size; disabling this option makes it a fixed limit.",
     "Size context for the request.": "Size context for the request.",
-
     "Bonsai automatic context": "Bonsai automatic context",
     "Native Bonsai only. Grow from the configured window as needed, up to 262,144 tokens including the answer. Keep the model loaded to reuse its cache.": "Native Bonsai only. Grow from the configured window as needed, up to 262,144 tokens including the answer. Keep the model loaded to reuse its cache.",
     "Add or merge this JSON server entry into Claude Desktop’s configuration file.": "Add or merge this JSON server entry into Claude Desktop’s configuration file.",
@@ -1355,7 +1354,8 @@
     "Audio profile for this computer": "Audio profile for this computer",
     "Install and use recommended profile": "Install and use recommended profile",
     "Release idle models between processing stages": "Release idle models between processing stages",
-    "Use custom settings": "Custom settings"
+    "Use custom settings": "Custom settings",
+    "New Transcription": "New Transcription"
   },
   "meetings.saved_count": {
     "one": "saved meeting",
@@ -1546,5 +1546,10 @@
   "audio.installed": "Audio profile installed and selected.",
   "audio.working": "Working",
   "settings.llm_preset": "Model preset",
-  "settings.llm_preset_help": "Choose a provider model or Custom. Use an API key for the selected provider."
+  "settings.llm_preset_help": "Choose a provider model or Custom. Use an API key for the selected provider.",
+  "nav.minimize_sidebar": "Minimize sidebar",
+  "brand.home": "Meet2Notes home",
+  "nav.main": "Main navigation",
+  "nav.open": "Open navigation",
+  "import.supported_formats": "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WebM, MOV"
 }
