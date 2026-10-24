@@ -800,7 +800,12 @@ class PromptService:
             item["kind"] == "transcription" and item["meeting_id"] == meeting_id
             for item in attached
         )
-        if use_rag and retrieval_budget >= 200 and not full_meeting_attached:
+        if (
+            use_rag
+            and bool(rag_config.get("enabled", True))
+            and retrieval_budget >= 200
+            and not full_meeting_attached
+        ):
             retrieval = await self.rag.search(question, meeting_id=meeting_id)
             sources = [
                 source for source in retrieval["results"]
@@ -819,7 +824,9 @@ class PromptService:
             context = "\n\n".join(sections)
         elif rag_context:
             context = rag_context
-        elif meeting_id is not None and not use_rag:
+        elif meeting_id is not None:
+            # Meeting scope always grounds on the meeting's own transcript —
+            # an unavailable RAG index must not blank out the context.
             context = self.rag.meeting_context(
                 meeting_id,
                 min(int(rag_config["max_context_chars"]), retrieval_budget * 3),
