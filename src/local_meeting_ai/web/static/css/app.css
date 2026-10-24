@@ -3233,6 +3233,23 @@ svg {
   display: none;
 }
 
+/* Playback ↔ transcript sync (imported video & audio) */
+.segment-row.playback-active {
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: inset 3px 0 0 #2563eb;
+  border-radius: 6px;
+}
+
+.media-player.video-active {
+  width: min(100%, 560px);
+  border-radius: 12px;
+  background: #000;
+}
+
+#follow-playback.follow-off {
+  opacity: 0.45;
+}
+
 .timestamp-button {
   display: inline-flex;
   align-items: center;

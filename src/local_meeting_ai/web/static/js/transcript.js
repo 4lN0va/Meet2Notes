@@ -15,7 +15,13 @@
   } = window.Meet2Notes;
 
   const page = document.querySelector(".minimal-transcript-page");
-  const audio = document.querySelector("#meeting-audio");
+  const audioElement = document.querySelector("#meeting-audio");
+  const videoElement = document.querySelector("#meeting-video");
+  // Points at the active playback element (video for imported video files,
+  // audio otherwise). Both implement HTMLMediaElement, so every existing
+  // reference to `audio` keeps working unchanged.
+  let audio = audioElement;
+  let followPlayback = localStorage.getItem("m2n-follow-playback") !== "0";
   const segmentContainer = document.querySelector("#transcript-segments");
   const startDialog = document.querySelector("#transcription-dialog");
   const titleDisplay = document.querySelector("#transcription-title-display");
@@ -415,6 +421,15 @@
       || null;
   }
 
+  const VIDEO_EXTENSIONS = ["mp4", "m4v", "mkv", "webm", "mov"];
+  function isVideoRecording(recording) {
+    const mediaType = String(recording?.media_type || "");
+    if (mediaType.toLowerCase().startsWith("video/")) return true;
+    const name = String(recording?.original_filename || "");
+    const extension = name.split(".").pop()?.toLowerCase() || "";
+    return VIDEO_EXTENSIONS.includes(extension);
+  }
+
   function configureAudio() {
     const playback = playbackRecording();
     const original = recordings.find((item) => item.role === "original");
@@ -429,12 +444,38 @@
     row.classList.remove("hidden");
     document.querySelector("#audio-filename").textContent =
       original?.original_filename || playback.original_filename || "Original recording";
-    const source = `/api/recordings/${playback.id}/media`;
+    // Imported video keeps its original MP4 as the playback source; the
+    // normalized recording is always WAV audio and has no video track.
+    const videoOriginal =
+      recordings.find((item) => item.role === "original" && isVideoRecording(item)) || null;
+    const wantVideo = Boolean(videoOriginal);
+    const source = wantVideo
+      ? `/api/recordings/${videoOriginal.id}/media`
+      : `/api/recordings/${playback.id}/media`;
+    const wasVideo = audio === videoElement;
+    if (wasVideo !== wantVideo) {
+      stopAudioPlayback();
+      audio.pause?.();
+      audioElement.removeAttribute("src");
+      videoElement.removeAttribute("src");
+      audioElement.load?.();
+      videoElement.load?.();
+    }
+    audio = wantVideo ? videoElement : audioElement;
+    videoElement.classList.toggle("hidden", !wantVideo);
+    audioElement.classList.toggle("hidden", wantVideo);
+    const kindLabel = document.querySelector("#audio-kind-label");
+    if (kindLabel) {
+      kindLabel.textContent = wantVideo
+        ? t("transcript.video_stored_locally")
+        : t("transcript.audio_stored_locally");
+    }
     if (audio.getAttribute("src")?.split("#")[0] !== source) {
       stopAudioPlayback();
       audio.src = source;
     }
     applyAudioAvailability();
+    updateFollowButton();
   }
 
   function audioWasDeleted() {
@@ -2941,6 +2982,57 @@
 
   audio.addEventListener("pause", clearAudioPlaybackState);
   audio.addEventListener("ended", clearAudioPlaybackState);
+
+  // --- Media playback ↔ transcript sync (works for imported video & audio) ---
+  let activeSyncSegmentId = null;
+
+  function findActiveSegment(seconds) {
+    const detail = lastDetail;
+    if (!detail?.segments?.length) return null;
+    const ms = seconds * 1000;
+    for (const segment of detail.segments) {
+      if (ms >= segment.start_ms && ms < Math.max(segment.end_ms, segment.start_ms + 1)) {
+        return segment;
+      }
+    }
+    return null;
+  }
+
+  function updateFollowButton() {
+    const button = document.querySelector("#follow-playback");
+    if (!button) return;
+    button.setAttribute("aria-pressed", followPlayback ? "true" : "false");
+    button.classList.toggle("follow-off", !followPlayback);
+  }
+
+  function syncTranscriptWithPlayback() {
+    if (!lastDetail || audio.paused) return;
+    const segment = findActiveSegment(audio.currentTime);
+    const id = segment?.id ?? null;
+    if (id === activeSyncSegmentId) return;
+    activeSyncSegmentId = id;
+    segmentContainer
+      .querySelectorAll(".segment-row.playback-active")
+      .forEach((row) => row.classList.remove("playback-active"));
+    if (id == null) return;
+    const row = segmentContainer.querySelector(`[data-segment-id="${id}"]`);
+    if (!row) return;
+    row.classList.add("playback-active");
+    if (followPlayback) {
+      requestAnimationFrame(() => row.scrollIntoView({ block: "center", behavior: "smooth" }));
+    }
+  }
+
+  for (const element of [audioElement, videoElement]) {
+    element.addEventListener("timeupdate", syncTranscriptWithPlayback);
+  }
+
+  document.querySelector("#follow-playback")?.addEventListener("click", () => {
+    followPlayback = !followPlayback;
+    localStorage.setItem("m2n-follow-playback", followPlayback ? "1" : "0");
+    updateFollowButton();
+    if (followPlayback) syncTranscriptWithPlayback();
+  });
 
   document.addEventListener("change", async (event) => {
     if (event.target.matches("#speaker-panel-filter, #speaker-panel-order")) {

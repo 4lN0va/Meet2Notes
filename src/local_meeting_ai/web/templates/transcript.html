@@ -139,9 +139,13 @@
       </span>
       <div class="canvas-audio-copy">
         <strong id="audio-filename">Recording</strong>
-        <span>Meeting audio · stored locally</span>
+        <span id="audio-kind-label">Meeting audio · stored locally</span>
       </div>
-      <audio id="meeting-audio" controls preload="metadata"></audio>
+      <video id="meeting-video" controls preload="metadata" class="media-player hidden"></video>
+      <audio id="meeting-audio" controls preload="metadata" class="media-player"></audio>
+      <button type="button" class="icon-button" id="follow-playback" aria-pressed="true" title="Follow timeline" data-i18n-title="transcript.follow_timeline">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h9M4 7h13M4 17h6"/><path d="m16 9 3 3-3 3"/></svg>
+      </button>
       <span class="save-indicator" id="editor-save-state"><i></i> Saved</span>
     </div>
 

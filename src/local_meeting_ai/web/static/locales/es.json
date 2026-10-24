@@ -1664,5 +1664,8 @@
   "brand.home": "Meet2Notes inicio",
   "nav.main": "Navegación principal",
   "nav.open": "Abrir navegación",
-  "import.supported_formats": "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WebM, MOV"
+  "import.supported_formats": "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WebM, MOV",
+  "transcript.follow_timeline": "Seguir la línea de tiempo",
+  "transcript.video_stored_locally": "Vídeo de la reunión · almacenado localmente",
+  "transcript.audio_stored_locally": "Audio de la reunión · almacenado localmente"
 }
