@@ -270,6 +270,8 @@ $ ./.venv/Scripts/python.exe -m pytest -q
 
 ## 13. 待確認事項（Blocking questions）
 
+> **2026-10-24 決議**：使用者已回覆全部六項——(1) 另建 Meet2Notes 專用驗證前端，上傳內容含逐字稿與摘要（JSON：文字、講者、時間戳記）；(2) 不修改原始驗證前端，於工作區複製副本實作 mock CRM；(3) 本階段僅預留接口、對上 mock CRM 驗證即停；(4) mock CRM 用埠 8766；(5) 接受 Python 3.14，必要時降版於虛擬環境；(6) 一切 git commit 僅留在本地。實作結果見 `docs/CRM_INTEGRATION.md`。
+
 1. **整合架構**：最終把摘要送進 CRM 的是 Meet2Notes（本規格）還是 Handy（驗證前端目前契約的對象），或兩者並行（不同工作流）？這決定 Phase 1 狀態機要不要接 Handy 的 session_id/transcript 事件。
 2. **驗證前端擴充授權**：同意我依 §9.3-2 擴充 `E:\Default\Desktop\handy-integration-verification-tool`（新增 `/api/crm/*` mock 端點 + dashboard 錯誤注入）嗎？該 repo 有未提交變更，我會先 branch 再動工，不覆蓋既有修改。
 3. **CRM 契約**：§10 清單何時能提供？在那之前自動化測試全部以 mock/fake 進行，不標記真實 CRM 驗收。
