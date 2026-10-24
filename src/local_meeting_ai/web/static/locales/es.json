@@ -1472,7 +1472,8 @@
     "Assistant permissions": "Permisos del asistente",
     "Interaction only": "Solo interacción",
     "Edit transcript": "Editar transcripción",
-    "Full access": "Acceso completo"
+    "Full access": "Acceso completo",
+    "Clear chat": "Borrar conversación"
   },
   "meetings.saved_count": {
     "one": "reuni?n guardada",
@@ -1677,5 +1678,6 @@
   "assistant.permission_edit": "Editar transcripción",
   "assistant.permission_full": "Acceso completo",
   "assistant.edits_applied": "Se aplicaron {count} cambios en esta reunión",
-  "assistant.saved_locally": "Ajustes del asistente guardados localmente."
+  "assistant.saved_locally": "Ajustes del asistente guardados localmente.",
+  "assistant.clear_chat": "Borrar conversación"
 }

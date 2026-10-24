@@ -1472,7 +1472,8 @@
     "Assistant permissions": "助理權限",
     "Interaction only": "僅互動回答",
     "Edit transcript": "可編輯逐字稿",
-    "Full access": "完全權限"
+    "Full access": "完全權限",
+    "Clear chat": "清除對話"
   },
   "meetings.saved_count": {
     "one": "場已儲存會議",
@@ -1677,5 +1678,6 @@
   "assistant.permission_edit": "可編輯逐字稿",
   "assistant.permission_full": "完全權限",
   "assistant.edits_applied": "已對這場會議套用 {count} 筆編輯",
-  "assistant.saved_locally": "助理設定已儲存在本機。"
+  "assistant.saved_locally": "助理設定已儲存在本機。",
+  "assistant.clear_chat": "清除對話"
 }

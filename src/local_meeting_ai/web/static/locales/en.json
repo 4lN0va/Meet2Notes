@@ -1472,7 +1472,8 @@
     "Assistant permissions": "Assistant permissions",
     "Interaction only": "Interaction only",
     "Edit transcript": "Edit transcript",
-    "Full access": "Full access"
+    "Full access": "Full access",
+    "Clear chat": "Clear chat"
   },
   "meetings.saved_count": {
     "one": "saved meeting",
@@ -1677,5 +1678,6 @@
   "assistant.permission_edit": "Edit transcript",
   "assistant.permission_full": "Full access",
   "assistant.edits_applied": "Applied {count} edit(s) to this meeting",
-  "assistant.saved_locally": "Assistant settings saved locally."
+  "assistant.saved_locally": "Assistant settings saved locally.",
+  "assistant.clear_chat": "Clear chat"
 }

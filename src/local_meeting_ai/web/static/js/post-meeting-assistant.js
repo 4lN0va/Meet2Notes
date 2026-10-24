@@ -25,9 +25,47 @@
   const embedded = widget.dataset.layout === "embedded" && Boolean(widget.closest(".prompt-assistant"));
   const history = [];
   const selectedAttachments = new Map();
+  const welcomePanel = document.querySelector("#post-meeting-assistant-welcome");
+
+  // --- Chat persistence: per meeting scope, survives page reloads ---
+  function chatKey() {
+    return `meet2notes.assistantChat.${meetingSelect.value || "all"}`;
+  }
+  function saveChat() {
+    try {
+      localStorage.setItem(chatKey(), JSON.stringify(chatLog.slice(-30)));
+    } catch {
+      // Storage full or unavailable: chat simply stops persisting.
+    }
+  }
+  function restoreChat() {
+    chatLog.length = 0;
+    history.length = 0;
+    messages.querySelectorAll(".post-meeting-assistant-message").forEach((node) => node.remove());
+    let restored = 0;
+    try {
+      const saved = JSON.parse(localStorage.getItem(chatKey()) || "[]");
+      for (const turn of saved) {
+        if (turn.role === "assistant") {
+          appendMessage("assistant", turn.content, turn.sources || [], true, turn.citations || []);
+        } else {
+          appendMessage("user", turn.content, [], false);
+        }
+        chatLog.push(turn);
+        history.push({ role: turn.role, content: turn.content });
+        restored += 1;
+      }
+    } catch {
+      // Corrupt history: start a fresh conversation.
+    }
+    if (!restored && welcomePanel && !messages.contains(welcomePanel)) {
+      messages.prepend(welcomePanel);
+    }
+  }
   let contextGeneration = 0;
   let contextReady = Promise.resolve();
   const storageKey = "meet2notes.postMeetingAssistant.v2";
+  const chatLog = [];
 
   async function initPermissionSelect() {
     if (!permissionSelect) return;
@@ -50,6 +88,14 @@
       }
     });
   }
+  document.querySelector("#assistant-clear-chat")?.addEventListener("click", () => {
+    try {
+      localStorage.removeItem(chatKey());
+    } catch {
+      // Ignore storage failures; clearing the view is enough.
+    }
+    restoreChat();
+  });
   void initPermissionSelect();
 
   function sourceTime(milliseconds) {
@@ -315,6 +361,7 @@
       if (defaultMeetingId && [...meetingSelect.options].some((option) => option.value === defaultMeetingId)) {
         meetingSelect.value = defaultMeetingId;
       }
+      restoreChat();
       contextReady = loadContextDocuments();
     } catch (error) {
       toast(error.message, "error");
@@ -339,6 +386,8 @@
     const value = question.value.trim();
     if (!value || form.dataset.busy) return;
     appendMessage("user", value);
+    chatLog.push({ role: "user", content: value });
+    saveChat();
     question.value = "";
     question.style.height = "auto";
     form.dataset.busy = "true";
@@ -368,6 +417,8 @@
       activity.finish();
       pending.remove();
       appendMessage("assistant", result.answer, result.sources || [], true, result.citations || []);
+      chatLog.push({ role: "assistant", content: result.answer, sources: result.sources || [], citations: result.citations || [] });
+      saveChat();
       const appliedEdits = Array.isArray(result.applied_edits) ? result.applied_edits : [];
       if (appliedEdits.length) {
         toast(t("assistant.edits_applied", { count: appliedEdits.length }));
@@ -410,8 +461,7 @@
   });
 
   meetingSelect.addEventListener("change", () => {
-    history.length = 0;
-    messages.replaceChildren();
+    restoreChat();
     contextReady = loadContextDocuments();
   });
   contextToggle.addEventListener("click", () => {
