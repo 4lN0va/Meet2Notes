@@ -16,6 +16,7 @@ from local_meeting_ai.application.assistant_tools import (
     AssistantToolExecutor,
     action_results_turn,
     apply_action_block,
+    looks_like_suggestion,
     normalize_permission,
     permission_allows_edits,
 )
@@ -954,6 +955,7 @@ class PromptService:
         """
         applied: list[AppliedEdit] = []
         seen_signatures: set[str] = set()
+        suggestion_nudge_used = False
         history = str(config.get("prompt_history") or "")
         for _round in range(3):
             try:
@@ -972,6 +974,26 @@ class PromptService:
             if not actions:
                 if applied:
                     result = SummaryResult(content_markdown=clean)
+                    return result, applied
+                # The model replied like an advisor (suggestions without
+                # actions) although it holds edit permission and the user
+                # asked for a change. One corrective round, then accept its
+                # answer as-is (the model may legitimately decline).
+                if not suggestion_nudge_used and looks_like_suggestion(
+                    clean, str(config.get("prompt_question") or "")
+                ):
+                    suggestion_nudge_used = True
+                    history += (
+                        "\nASSISTANT: " + clean
+                        + "\nUSER: You have permission to edit this meeting. "
+                        "Do not describe the change — apply it now by ending "
+                        "your reply with ###ACTIONS###."
+                    )
+                    config = {**config, "prompt_history": history}
+                    result = await self.summary_engine.summarize(
+                        context, config, progress or _NoopProgress(), is_cancelled
+                    )
+                    continue
                 return result, applied
             signatures = {json.dumps(action, sort_keys=True) for action in actions}
             if signatures.issubset(seen_signatures):

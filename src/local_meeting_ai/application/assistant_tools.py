@@ -19,6 +19,7 @@ back to the model.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -92,9 +93,12 @@ class AssistantToolExecutor:
         lines = [
             "## ASSISTANT TOOLS",
             f"Permission level: {self.permission}.",
-            "To modify data, end your reply with a line '###ACTIONS###' followed",
-            "by a JSON array of actions. Actions run immediately after your reply,",
-            "then you receive their results. Without actions, reply normally.",
+            "When the user asks for any modification, you MUST apply it yourself:",
+            "end that reply with a line '###ACTIONS###' followed by a JSON array",
+            "of actions. Actions run immediately after your reply, then you",
+            "receive their results. NEVER merely describe or suggest a change —",
+            "a reply without ###ACTIONS### leaves the data untouched. Without a",
+            "modification request, reply normally.",
         ]
         if self.permission == PERMISSION_EDIT_TRANSCRIPT:
             lines.append(
@@ -278,6 +282,23 @@ def apply_action_block(
 
 
 _ACTION_RESULTS_TEMPLATE = "ACTION RESULTS (applied {} edit(s)):\n{}"
+
+_EDIT_INTENT = re.compile(
+    r"改成|改為|修正|替換|取代|更新|編輯|fix|replace|update|correct", re.IGNORECASE
+)
+_SUGGESTION_MARKER = re.compile(
+    r"建議|建议|should be|suggest|可以改|可改為|would (?:change|replace)", re.IGNORECASE
+)
+
+
+def looks_like_suggestion(reply: str, question: str) -> bool:
+    """True when the reply describes edits the user actually requested.
+
+    Both the question must look like an edit request and the reply must
+    read like advice; an assistant answering a genuine "what would you
+    change?" question is never nagged.
+    """
+    return bool(_SUGGESTION_MARKER.search(reply)) and bool(_EDIT_INTENT.search(question))
 
 
 def action_results_turn(applied: list[AppliedEdit]) -> dict[str, str]:
