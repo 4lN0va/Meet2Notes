@@ -289,6 +289,12 @@ _EDIT_INTENT = re.compile(
 _SUGGESTION_MARKER = re.compile(
     r"建議|建议|should be|suggest|可以改|可改為|would (?:change|replace)", re.IGNORECASE
 )
+_CLAIMS_COMPLETION = re.compile(
+    r"已將|已修正|已改|已更新|已套用|已經改|已完成修正"
+    r"|has been (?:updated|corrected|changed|applied)"
+    r"|successfully (?:updated|corrected|changed)",
+    re.IGNORECASE,
+)
 
 
 def looks_like_suggestion(reply: str, question: str) -> bool:
@@ -299,6 +305,16 @@ def looks_like_suggestion(reply: str, question: str) -> bool:
     change?" question is never nagged.
     """
     return bool(_SUGGESTION_MARKER.search(reply)) and bool(_EDIT_INTENT.search(question))
+
+
+def claims_unapplied_completion(reply: str, question: str) -> bool:
+    """True when the reply SAYS the edit was made but no action ran.
+
+    Models sometimes answer "已將…修正為…" without an ###ACTIONS### block;
+    nothing was modified, so the claim is false and the caller must ask the
+    model to actually apply the change.
+    """
+    return bool(_CLAIMS_COMPLETION.search(reply)) and bool(_EDIT_INTENT.search(question))
 
 
 def action_results_turn(applied: list[AppliedEdit]) -> dict[str, str]:

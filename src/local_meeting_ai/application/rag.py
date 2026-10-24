@@ -16,6 +16,7 @@ from local_meeting_ai.application.assistant_tools import (
     AssistantToolExecutor,
     action_results_turn,
     apply_action_block,
+    claims_unapplied_completion,
     looks_like_suggestion,
     normalize_permission,
     permission_allows_edits,
@@ -975,19 +976,24 @@ class PromptService:
                 if applied:
                     result = SummaryResult(content_markdown=clean)
                     return result, applied
-                # The model replied like an advisor (suggestions without
-                # actions) although it holds edit permission and the user
-                # asked for a change. One corrective round, then accept its
-                # answer as-is (the model may legitimately decline).
-                if not suggestion_nudge_used and looks_like_suggestion(
+                # The model replied like an advisor (suggestions) or falsely
+                # claimed the edit was done (no ###ACTIONS### block) although
+                # it holds edit permission and the user asked for a change.
+                # One corrective round, then accept its answer as-is (the
+                # model may legitimately decline or ask for details).
+                needs_correction = looks_like_suggestion(
                     clean, str(config.get("prompt_question") or "")
-                ):
+                ) or claims_unapplied_completion(
+                    clean, str(config.get("prompt_question") or "")
+                )
+                if not suggestion_nudge_used and needs_correction:
                     suggestion_nudge_used = True
                     history += (
                         "\nASSISTANT: " + clean
-                        + "\nUSER: You have permission to edit this meeting. "
-                        "Do not describe the change — apply it now by ending "
-                        "your reply with ###ACTIONS###."
+                        + "\nUSER: Nothing was modified — your reply contained no"
+                        " ###ACTIONS### block. You have permission to edit this"
+                        " meeting. Apply the change now by ending your reply with"
+                        " ###ACTIONS###, or say plainly that you cannot."
                     )
                     config = {**config, "prompt_history": history}
                     result = await self.summary_engine.summarize(

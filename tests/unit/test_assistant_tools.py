@@ -198,6 +198,21 @@ def test_unknown_action_rejected(repos: FakeRepos) -> None:
         executor.execute({"action": "delete_meeting"})
 
 
+def test_claims_unapplied_completion_detection() -> None:
+    # The failure mode reported live: the model SAYS the edit is done but
+    # emits no ###ACTIONS### block, so nothing was actually modified.
+    from local_meeting_ai.application.assistant_tools import (
+        claims_unapplied_completion,
+        looks_like_suggestion,
+    )
+
+    sample = "已將該段修正為：關於健保費用的補助事宜"  # noqa: RUF001
+    assert claims_unapplied_completion(sample, "把X改成Y")
+    assert not claims_unapplied_completion("這場會議討論健保", "把X改成Y")
+    # advisory replies are covered by the sibling detector
+    assert looks_like_suggestion("建議將『党』改為『黨』", "把X改成Y")
+
+
 def test_parse_reply_splits_actions_and_cleans_text(repos: FakeRepos) -> None:
     executor = _executor(repos, PERMISSION_EDIT_TRANSCRIPT)
     reply = (
