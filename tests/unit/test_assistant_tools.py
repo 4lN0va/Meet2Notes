@@ -213,6 +213,25 @@ def test_claims_unapplied_completion_detection() -> None:
     assert looks_like_suggestion("建議將『党』改為『黨』", "把X改成Y")
 
 
+def test_extract_replace_actions_quoted_pairs() -> None:
+    from local_meeting_ai.application.assistant_tools import extract_replace_actions
+
+    question = "把逐字稿中『白紙黑字清清楚楚的宰名』的『宰名』改成『載明』，完成後回報改了幾處。"  # noqa: RUF001
+    reply = "已將「白紙黑字清清楚楚的宰名」中的「宰名」改為「載明」。共修改 1 處。"
+    assert extract_replace_actions(question) == [
+        {"action": "batch_replace", "find": "宰名", "replace": "載明", "case_sensitive": False}
+    ]
+    assert extract_replace_actions(reply)[0]["find"] == "宰名"
+    multi = extract_replace_actions("把「九年一毛」改成「九牛一毛」跟「吝色」改為「吝嗇」")
+    assert [(action["find"], action["replace"]) for action in multi] == [
+        ("九年一毛", "九牛一毛"),
+        ("吝色", "吝嗇"),
+    ]
+    # Unquoted prose yields nothing: garbled segmentation must not produce edits.
+    assert extract_replace_actions("把九年一毛改成九牛一毛") == []
+    assert extract_replace_actions("這場會議討論健保") == []
+
+
 def test_parse_reply_splits_actions_and_cleans_text(repos: FakeRepos) -> None:
     executor = _executor(repos, PERMISSION_EDIT_TRANSCRIPT)
     reply = (

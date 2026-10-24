@@ -317,6 +317,39 @@ def claims_unapplied_completion(reply: str, question: str) -> bool:
     return bool(_CLAIMS_COMPLETION.search(reply)) and bool(_EDIT_INTENT.search(question))
 
 
+_QUOTED_REPLACE = re.compile(
+    r"[「『]([^「」『』\n]{1,60})[」』]\s*(?:的\s*)?"
+    r"(?:改成|改為|改为|更改為|修正為|更正為|替換成?|替换成?|取代為?)\s*"
+    r"[「『]([^「」『』\n]{1,80})[」』]"
+)
+
+
+def extract_replace_actions(*texts: str) -> list[dict[str, Any]]:
+    """Deterministic fallback: pulls quoted 『A』→『B』 pairs from text.
+
+    Used when a model with edit permission claims a replacement was made but
+    never emitted an ###ACTIONS### block. Only explicit quoted pairs are
+    extracted; unquoted prose is intentionally ignored to avoid garbled
+    Chinese segmentation producing wrong replacements.
+    """
+    pairs: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for text in texts:
+        for match in _QUOTED_REPLACE.finditer(text):
+            find = match.group(1).strip()
+            replace = match.group(2).strip()
+            pair = (find, replace)
+            if find and replace and find != replace and pair not in seen:
+                seen.add(pair)
+                pairs.append(pair)
+        if len(pairs) >= 8:
+            break
+    return [
+        {"action": "batch_replace", "find": find, "replace": replace, "case_sensitive": False}
+        for find, replace in pairs
+    ]
+
+
 def action_results_turn(applied: list[AppliedEdit]) -> dict[str, str]:
     detail = "\n".join(f"- {edit.action}: {edit.detail}" for edit in applied)
     return {

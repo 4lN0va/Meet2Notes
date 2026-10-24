@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import re
 import unicodedata
@@ -17,6 +18,7 @@ from local_meeting_ai.application.assistant_tools import (
     action_results_turn,
     apply_action_block,
     claims_unapplied_completion,
+    extract_replace_actions,
     looks_like_suggestion,
     normalize_permission,
     permission_allows_edits,
@@ -47,6 +49,8 @@ from local_meeting_ai.infrastructure.llm_context import (
 
 from .ai_services import SUMMARY_DEFAULTS, configured_values
 from .rag_vector_store import RagVectorStoreGateway
+
+logger = logging.getLogger(__name__)
 
 RAG_DEFAULTS: dict[str, Any] = {
     "enabled": True,
@@ -981,6 +985,10 @@ class PromptService:
                 # it holds edit permission and the user asked for a change.
                 # One corrective round, then accept its answer as-is (the
                 # model may legitimately decline or ask for details).
+                logger.warning(
+                    "Assistant tool loop: reply had no actions; reply=%.200s",
+                    clean,
+                )
                 needs_correction = looks_like_suggestion(
                     clean, str(config.get("prompt_question") or "")
                 ) or claims_unapplied_completion(
@@ -1000,6 +1008,35 @@ class PromptService:
                         context, config, progress or _NoopProgress(), is_cancelled
                     )
                     continue
+                if needs_correction:
+                    # Deterministic last resort: the model holds edit
+                    # permission and claims a replacement, but keeps ignoring
+                    # the ###ACTIONS### protocol. Extract the quoted
+                    # 'A 改成 B' pair(s) from the question/reply and apply
+                    # them directly so the user's edit actually happens.
+                    fallback = extract_replace_actions(
+                        clean, str(config.get("prompt_question") or "")
+                    )
+                    if fallback:
+                        try:
+                            round_applied = apply_action_block(executor, fallback)
+                        except ValidationError as error:
+                            logger.warning(
+                                "Assistant tool loop: fallback rejected: %s", error
+                            )
+                            round_applied = []
+                        meaningful = [
+                            edit
+                            for edit in round_applied
+                            if "replaced in 0 segment(s)" not in edit.detail
+                            and "already up to date" not in edit.detail
+                        ]
+                        if meaningful:
+                            applied.extend(meaningful)
+                            logger.info(
+                                "Assistant tool loop: deterministic fallback applied"
+                                " %d edit(s) the model failed to send", len(meaningful),
+                            )
                 return result, applied
             signatures = {json.dumps(action, sort_keys=True) for action in actions}
             if signatures.issubset(seen_signatures):
@@ -1011,6 +1048,10 @@ class PromptService:
             try:
                 round_applied = apply_action_block(executor, actions)
             except ValidationError as error:
+                logger.warning(
+                    "Assistant tool loop: actions rejected: %s | actions=%.300s",
+                    error, json.dumps(actions, ensure_ascii=False),
+                )
                 history += (
                     "\nASSISTANT: " + str(result.content_markdown)
                     + "\nUSER: The actions were rejected: " + str(error) + ". "
