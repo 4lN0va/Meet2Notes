@@ -232,6 +232,39 @@ def test_extract_replace_actions_quoted_pairs() -> None:
     assert extract_replace_actions("這場會議討論健保") == []
 
 
+def test_direct_actions_from_question_permission_tiers(repos: FakeRepos) -> None:
+    repos.segments[101].text = "關於健保起付的差別待遇"  # make the phrase exist
+    quoted_q = "把「台灣民眾党」改成「台灣民眾黨」"
+    unquoted_q = "把健保起付改成健保給付"
+
+    edit_executor = _executor(repos, PERMISSION_EDIT_TRANSCRIPT)
+    # quoted pairs apply at every edit tier
+    actions = edit_executor.direct_actions_from_question(quoted_q)
+    assert actions and actions[0]["find"] == "台灣民眾党"
+    # unquoted pairs are NOT honoured below full permission
+    assert edit_executor.direct_actions_from_question(unquoted_q) == []
+
+    full_executor = _executor(repos, PERMISSION_FULL)
+    actions = full_executor.direct_actions_from_question(unquoted_q)
+    assert actions and actions[0] == {
+        "action": "batch_replace", "find": "健保起付",
+        "replace": "健保給付", "case_sensitive": False,
+    }
+
+
+def test_direct_actions_existence_and_hypothetical_guards(repos: FakeRepos) -> None:
+    executor = _executor(repos, PERMISSION_FULL)
+    # unquoted phrase that does not exist in the transcript → dropped
+    assert executor.direct_actions_from_question("把不存在的詞改成任何字") == []
+    # hypothetical phrasing must never produce edits
+    assert executor.direct_actions_from_question(
+        "如果把「台灣民眾党」改成「台灣民眾黨」會怎樣"
+    ) == []
+    assert executor.direct_actions_from_question(
+        "確認一下「台灣民眾党」改成「台灣民眾黨」對不對"
+    ) == []
+
+
 def test_parse_reply_splits_actions_and_cleans_text(repos: FakeRepos) -> None:
     executor = _executor(repos, PERMISSION_EDIT_TRANSCRIPT)
     reply = (

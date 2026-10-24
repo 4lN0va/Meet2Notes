@@ -123,6 +123,7 @@ ignore = ["B008"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 "tools/**" = ["RUF001"]  # zh-TW demo content uses fullwidth punctuation
+"src/local_meeting_ai/application/assistant_tools.py" = ["RUF001"]  # matches zh-TW fullwidth punctuation on purpose
 
 [tool.mypy]
 python_version = "3.11"

@@ -18,7 +18,9 @@ from local_meeting_ai.application.assistant_tools import (
     action_results_turn,
     apply_action_block,
     claims_unapplied_completion,
+    direct_confirmation_message,
     extract_replace_actions,
+    is_pure_edit_instruction,
     looks_like_suggestion,
     normalize_permission,
     permission_allows_edits,
@@ -879,6 +881,58 @@ class PromptService:
         executor = self._executor_for(meeting_id)
         if executor is not None:
             context = context + "\n\n" + executor.tool_instructions()
+            # Direct-apply path: explicit replacement instructions in the
+            # question are applied BEFORE the model answers, so edits happen
+            # even when the model ignores the ###ACTIONS### protocol. The
+            # model is told what already changed and merely narrates it.
+            direct_actions = executor.direct_actions_from_question(question)
+            if direct_actions:
+                try:
+                    pre_applied = apply_action_block(executor, direct_actions)
+                except ValidationError as error:
+                    logger.warning(
+                        "Assistant direct-apply rejected: %s | actions=%.200s",
+                        error, json.dumps(direct_actions, ensure_ascii=False),
+                    )
+                    pre_applied = []
+                meaningful = [
+                    edit for edit in pre_applied
+                    if "replaced in 0 segment(s)" not in edit.detail
+                ]
+                if meaningful:
+                    applied_edits.extend(meaningful)
+                    logger.info(
+                        "Assistant direct-apply: %d edit(s) applied before the model replied",
+                        len(meaningful),
+                    )
+                    if is_pure_edit_instruction(question, direct_actions):
+                        # The question was only an edit instruction and it is
+                        # already done: answer with a canned confirmation —
+                        # instant, truthful, no model narration needed.
+                        answer_payload = {
+                            "answer": direct_confirmation_message(meaningful),
+                            "applied_edits": [
+                                {"action": edit.action, "detail": edit.detail,
+                                 "before": edit.before, "after": edit.after}
+                                for edit in applied_edits
+                            ],
+                            "citations": citations,
+                            "sources": sources,
+                            "retrieval": retrieval,
+                            "scope": (
+                                "rag" if use_rag
+                                else ("meeting" if meeting_id else "model")
+                            ),
+                            "attachments": attached,
+                            "context_usage": {},
+                        }
+                        return answer_payload
+                    context += (
+                        "\n\nEDITS ALREADY APPLIED before your reply (do NOT"
+                        " repeat them as actions). Confirm these edits to the"
+                        " user briefly, quoting the NEW text only:\n"
+                        + "\n".join(f"- {edit.detail}" for edit in meaningful)
+                    )
         result = await self.summary_engine.summarize(
             context,
             config,
@@ -886,8 +940,15 @@ class PromptService:
             is_cancelled,
         )
         if executor is not None:
-            result, applied_edits = await self._run_tool_loop(
+            result, loop_edits = await self._run_tool_loop(
                 executor, result, config, context, progress, is_cancelled
+            )
+            # Drop no-op loop edits (e.g. the model re-sending a change that
+            # the direct-apply path already made) so the toast stays truthful.
+            applied_edits.extend(
+                edit for edit in loop_edits
+                if "replaced in 0 segment(s)" not in edit.detail
+                and "already up to date" not in edit.detail
             )
         answer_payload = {
             "answer": result.content_markdown,

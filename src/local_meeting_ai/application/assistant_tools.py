@@ -88,6 +88,39 @@ class AssistantToolExecutor:
     # Prompt helpers
     # ------------------------------------------------------------------
 
+    def find_exists(self, find: str) -> bool:
+        """True when the phrase really occurs in this meeting's transcript.
+
+        Existence validation is what makes unquoted 把X改成Y extraction safe:
+        a mis-segmented phrase that does not exist in the transcript can
+        never match (batch_replace would be a no-op) and is dropped here.
+        """
+        needle = find.strip().lower()
+        return any(needle in segment.text.lower() for segment in self._segments.values())
+
+    def direct_actions_from_question(self, question: str) -> list[dict[str, Any]]:
+        """Deterministic edit actions parsed from the user's question.
+
+        Applied BEFORE the model answers so explicit replacement instructions
+        always take effect, regardless of the model's protocol compliance.
+
+        - Quoted 「A」改成「B」 pairs: honoured at every edit permission level
+          (the quotes are an unambiguous edit instruction).
+        - Unquoted 把X改成Y pairs: honoured only at full permission, and only
+          when X verifiably exists in the transcript.
+        - Hypothetical questions are never applied.
+        """
+        if is_hypothetical(question):
+            return []
+        actions = extract_replace_actions(question)
+        seen = {str(action.get("find")) for action in actions}
+        if self.permission == PERMISSION_FULL:
+            for find, replace in extract_unquoted_pairs(question):
+                if find not in seen and self.find_exists(find):
+                    actions.append(_replace_action(find, replace))
+                    seen.add(find)
+        return actions[:8]
+
     def tool_instructions(self) -> str:
         """Protocol text appended to the assistant context for this level."""
         lines = [
@@ -332,22 +365,93 @@ def extract_replace_actions(*texts: str) -> list[dict[str, Any]]:
     extracted; unquoted prose is intentionally ignored to avoid garbled
     Chinese segmentation producing wrong replacements.
     """
+    pairs = _collect_pairs(_QUOTED_REPLACE.finditer, texts)
+    return [_replace_action(find, replace) for find, replace in pairs]
+
+
+_UNQUOTED_REPLACE = re.compile(
+    r"(?:把|將|将)\s*([^，。！？,!?「」『』；;\n]{2,16}?)\s*"
+    r"(?:改成|改為|改为|更正為|修正為|替換成?|替换成?|取代為?)\s*"
+    r"([^，。！？,!?「」『』；;\n]{1,20})"
+)
+
+_HYPOTHETICAL_MARKER = re.compile(
+    r"如果|假如|假設|若是|會怎樣|可以嗎|好不好|要不要|確認|對不對|正確嗎|"
+    r"差別|哪個好|意思|解釋|wh?at if",
+    re.IGNORECASE,
+)
+
+
+def extract_unquoted_pairs(text: str) -> list[tuple[str, str]]:
+    """Pulls unquoted 把X改成Y pairs (existence must be validated by caller)."""
+    return _collect_pairs(_UNQUOTED_REPLACE.finditer, [text])
+
+
+def is_hypothetical(question: str) -> bool:
+    """True when the question discusses an edit instead of requesting it.
+
+    Guards the direct-apply path: '如果把X改成Y會怎樣' or '確認X改成Y對不對'
+    must never modify the transcript.
+    """
+    return bool(_HYPOTHETICAL_MARKER.search(question))
+
+
+_EDIT_FILLER = re.compile(
+    r"把|將|将|请|請|帮我|幫我|所有|全部|逐字稿|中|里|裡|的|完成後|回報|一下|共幾處|改了幾處"
+    r"|改成|改為|改为|修正|更正|替换|替換|取代"
+    r"|，|。|！|？|\?|、|；|;|：|:|\s"
+)
+
+
+def is_pure_edit_instruction(question: str, actions: list[dict[str, Any]]) -> bool:
+    """True when the question is only an edit instruction, nothing else.
+
+    After removing the find/replace phrases of every extracted action plus
+    common filler words, almost nothing may remain — then the request needs
+    no model narration at all and a canned confirmation is the truthful,
+    instant answer. Mixed questions fall through to the model.
+    """
+    residual = question
+    for action in actions:
+        residual = residual.replace(str(action.get("find") or ""), "")
+        residual = residual.replace(str(action.get("replace") or ""), "")
+    residual = _EDIT_FILLER.sub("", residual)
+    return len(residual) <= 4
+
+
+def direct_confirmation_message(applied: list[Any]) -> str:
+    """Canned zh-TW confirmation for edits applied by the direct path."""
+    lines = ["已直接完成修改："]
+    lines.extend(f"- {edit.detail}" for edit in applied)
+    lines.append("（無須模型生成，修改已在回答前套用）")
+    return "\n".join(lines)
+
+
+def _collect_pairs(
+    iterate: Any, texts: Any
+) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for text in texts:
-        for match in _QUOTED_REPLACE.finditer(text):
-            find = match.group(1).strip()
-            replace = match.group(2).strip()
+        for match in iterate(text):
+            find = (match.group(1) or "").strip()
+            replace = (match.group(2) or "").strip()
             pair = (find, replace)
             if find and replace and find != replace and pair not in seen:
                 seen.add(pair)
                 pairs.append(pair)
         if len(pairs) >= 8:
             break
-    return [
-        {"action": "batch_replace", "find": find, "replace": replace, "case_sensitive": False}
-        for find, replace in pairs
-    ]
+    return pairs
+
+
+def _replace_action(find: str, replace: str) -> dict[str, Any]:
+    return {
+        "action": "batch_replace",
+        "find": find,
+        "replace": replace,
+        "case_sensitive": False,
+    }
 
 
 def action_results_turn(applied: list[AppliedEdit]) -> dict[str, str]:
