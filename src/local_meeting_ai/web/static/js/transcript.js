@@ -464,6 +464,10 @@
     audio = wantVideo ? videoElement : audioElement;
     videoElement.classList.toggle("hidden", !wantVideo);
     audioElement.classList.toggle("hidden", wantVideo);
+    // Split layout: sticky media column beside the scrolling transcript.
+    document
+      .querySelector("#meeting-tab-transcript")
+      ?.classList.toggle("media-split", wantVideo);
     const kindLabel = document.querySelector("#audio-kind-label");
     if (kindLabel) {
       kindLabel.textContent = wantVideo

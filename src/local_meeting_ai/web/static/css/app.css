@@ -3250,6 +3250,65 @@ svg {
   opacity: 0.45;
 }
 
+/* Split view: sticky video column beside the scrolling transcript so both
+   stay readable at the same time. */
+#meeting-tab-transcript.media-split {
+  display: grid;
+  grid-template-columns: minmax(360px, 44%) minmax(0, 1fr);
+  gap: 8px 24px;
+  align-items: start;
+}
+
+#meeting-tab-transcript.media-split > #audio-row {
+  grid-column: 1;
+  grid-row: 1 / span 20;
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px;
+}
+
+#meeting-tab-transcript.media-split > #audio-row .canvas-audio-icon {
+  display: none;
+}
+
+#meeting-tab-transcript.media-split > #audio-row .media-player {
+  width: 100%;
+  max-height: 56vh;
+  border-radius: 12px;
+  background: #000;
+}
+
+#meeting-tab-transcript.media-split > .minimal-editor-toolbar,
+#meeting-tab-transcript.media-split > .transcript-view-controls,
+#meeting-tab-transcript.media-split > #transcription-progress,
+#meeting-tab-transcript.media-split > #transcript-segments,
+#meeting-tab-transcript.media-split > .minimal-empty-state {
+  grid-column: 2;
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  #meeting-tab-transcript.media-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #meeting-tab-transcript.media-split > #audio-row {
+    grid-column: 1;
+    grid-row: auto;
+    position: static;
+  }
+  #meeting-tab-transcript.media-split > .minimal-editor-toolbar,
+  #meeting-tab-transcript.media-split > .transcript-view-controls,
+  #meeting-tab-transcript.media-split > #transcription-progress,
+  #meeting-tab-transcript.media-split > #transcript-segments,
+  #meeting-tab-transcript.media-split > .minimal-empty-state {
+    grid-column: 1;
+  }
+}
+
 .timestamp-button {
   display: inline-flex;
   align-items: center;
