@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Protocol
 
+from local_meeting_ai.domain.crm import CrmAgenda, CrmSubmissionResult
 from local_meeting_ai.domain.entities import (
     AudioCaptureSource,
     AudioFrameBatch,
@@ -231,3 +232,30 @@ class EmbeddingProvider(Protocol):
     async def unload(self, profile_id: str | None = None) -> None: ...
 
     def shutdown(self) -> None: ...
+
+
+class CRMClient(Protocol):
+    """Outbound CRM integration boundary (agenda fetch + meeting deliveries).
+
+    Implementations must raise ``domain.errors.CrmError`` subclasses on
+    failure and must never retry inside the client; retry policy belongs to
+    the caller so the same idempotency key is reused across attempts.
+    """
+
+    async def health_check(self) -> dict[str, Any]: ...
+
+    async def get_meeting_agenda(self, meeting_code: str) -> CrmAgenda: ...
+
+    async def submit_transcripts(
+        self, payload: dict[str, Any], *, idempotency_key: str
+    ) -> CrmSubmissionResult: ...
+
+    async def submit_summary(
+        self, payload: dict[str, Any], *, idempotency_key: str
+    ) -> CrmSubmissionResult: ...
+
+    async def submit_meeting_ended(
+        self, payload: dict[str, Any], *, idempotency_key: str
+    ) -> CrmSubmissionResult: ...
+
+    async def aclose(self) -> None: ...

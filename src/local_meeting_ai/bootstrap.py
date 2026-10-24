@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from local_meeting_ai.adapters.audio_capture import create_audio_capture_backend
+from local_meeting_ai.adapters.crm.http_client import HttpxCrmClient
 from local_meeting_ai.adapters.diarization.profile_matching import (
     SherpaOnnxSpeakerProfileMatcher,
 )
@@ -19,6 +20,7 @@ from local_meeting_ai.application.ai_services import (
     SummaryService,
 )
 from local_meeting_ai.application.capture_service import LiveCaptureService
+from local_meeting_ai.application.crm_service import CrmService
 from local_meeting_ai.application.final_pipeline import FinalProcessingPipeline
 from local_meeting_ai.application.live_assistant import LiveAssistantService
 from local_meeting_ai.application.rag import PromptService, RagService
@@ -37,6 +39,7 @@ from local_meeting_ai.domain.protocols import (
     AudioCaptureBackend,
     AudioNormalizer,
     AudioRangeExporter,
+    CRMClient,
     DiarizationEngine,
     EmbeddingProvider,
     SummaryEngine,
@@ -188,6 +191,8 @@ class Container:
     live_assistant_repository: LiveAssistantRepository
     live_assistant_credentials: LiveAssistantCredentialStore
     live_assistant_service: LiveAssistantService
+    crm_client: CRMClient | None
+    crm_service: CrmService
 
 
 def build_container(
@@ -200,6 +205,7 @@ def build_container(
     summary_engine: SummaryEngine | None = None,
     embedding_provider: EmbeddingProvider | None = None,
     audio_range_exporter: AudioRangeExporter | None = None,
+    crm_client: CRMClient | None = None,
 ) -> Container:
     paths = AppPaths.from_settings(settings)
     paths.ensure(include_models=False)
@@ -245,6 +251,15 @@ def build_container(
         MemoryLiveAssistantCredentialStore()
         if settings.testing
         else KeyringLiveAssistantCredentialStore()
+    )
+    resolved_crm_client: CRMClient | None = crm_client
+    if resolved_crm_client is None and settings.crm_base_url:
+        resolved_crm_client = HttpxCrmClient(settings)
+    crm_service = CrmService(
+        meetings=meetings,
+        transcriptions=transcriptions,
+        summaries=summaries,
+        client=resolved_crm_client,
     )
     # This is intentionally a second runtime instance. Its executor, request
     # queue and resident local model are independent from summaries and Prompt.
@@ -461,4 +476,6 @@ def build_container(
         live_assistant_repository=live_assistant_repository,
         live_assistant_credentials=live_assistant_credentials,
         live_assistant_service=live_assistant_service,
+        crm_client=resolved_crm_client,
+        crm_service=crm_service,
     )

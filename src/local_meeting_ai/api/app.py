@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from local_meeting_ai import __version__
+from local_meeting_ai.api.crm_routes import router as crm_router
 from local_meeting_ai.api.library_routes import router as library_router
 from local_meeting_ai.api.live_assistant_routes import router as live_assistant_router
 from local_meeting_ai.api.routes import router as api_router
@@ -32,6 +33,7 @@ from local_meeting_ai.domain.protocols import (
     AudioCaptureBackend,
     AudioNormalizer,
     AudioRangeExporter,
+    CRMClient,
     DiarizationEngine,
     EmbeddingProvider,
     SummaryEngine,
@@ -52,6 +54,7 @@ def create_app(
     summary_engine: SummaryEngine | None = None,
     embedding_provider: EmbeddingProvider | None = None,
     audio_range_exporter: AudioRangeExporter | None = None,
+    crm_client: CRMClient | None = None,
 ) -> FastAPI:
     resolved_settings = settings or AppSettings()
     container = build_container(
@@ -63,6 +66,7 @@ def create_app(
         summary_engine=summary_engine,
         embedding_provider=embedding_provider,
         audio_range_exporter=audio_range_exporter,
+        crm_client=crm_client,
     )
 
     @asynccontextmanager
@@ -115,6 +119,9 @@ def create_app(
             # Keep the dispatcher alive until producers have stopped so terminal
             # job events cannot be stranded during application shutdown.
             await container.webhook_service.stop()
+            crm_close = getattr(container.crm_client, "aclose", None)
+            if callable(crm_close):
+                await crm_close()
             background_tasks = list(lifespan_app.state.background_tasks)
             if background_tasks:
                 await asyncio.gather(*background_tasks, return_exceptions=True)
@@ -206,6 +213,7 @@ def create_app(
     app.include_router(library_router)
     app.include_router(live_assistant_router)
     app.include_router(webhook_router)
+    app.include_router(crm_router)
     _register_web_routes(app, templates, container)
     return app
 
