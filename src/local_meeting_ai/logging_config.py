@@ -62,6 +62,18 @@ class ActivityLogHandler(logging.Handler):
             self.handleError(record)
 
 
+class ProactorNoiseFilter(logging.Filter):
+    """Drops the Python 3.14 ProactorEventLoop teardown noise.
+
+    On Windows, closing keep-alive HTTP connections (the SSE event stream)
+    logs '_call_connection_lost' exceptions through the asyncio logger on
+    every page unload. They are harmless and spam the activity feed.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "_call_connection_lost" not in record.getMessage()
+
+
 def configure_logging(paths: AppPaths, level: str) -> ActivityLog:
     paths.logs.mkdir(parents=True, exist_ok=True)
     formatter = logging.Formatter(
@@ -91,5 +103,9 @@ def configure_logging(paths: AppPaths, level: str) -> ActivityLog:
     root.addHandler(console)
     root.addHandler(rotating_file)
     root.addHandler(activity_handler)
+    # Windows/Python 3.14: SSE keep-alive teardown logs harmless
+    # '_call_connection_lost' exceptions on every page unload.
+    asyncio_logger = logging.getLogger("asyncio")
+    asyncio_logger.addFilter(ProactorNoiseFilter())
     logging.getLogger(__name__).info("Meet2Notes activity logging initialized")
     return activity_log

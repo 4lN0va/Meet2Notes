@@ -422,6 +422,9 @@
       const appliedEdits = Array.isArray(result.applied_edits) ? result.applied_edits : [];
       if (appliedEdits.length) {
         toast(t("assistant.edits_applied", { count: appliedEdits.length }));
+        window.dispatchEvent(new CustomEvent("m2n:transcript-updated", {
+          detail: { meetingId: meetingSelect.value ? Number(meetingSelect.value) : null },
+        }));
       }
       history.push({ role: "user", content: value }, { role: "assistant", content: result.answer });
       const usage = result.context_usage || {};

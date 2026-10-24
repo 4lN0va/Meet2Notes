@@ -3030,6 +3030,13 @@
   for (const element of [audioElement, videoElement]) {
     element.addEventListener("timeupdate", syncTranscriptWithPlayback);
   }
+  // The Meeting Assistant can edit segments server-side; re-render the
+  // transcript so the visible text always matches the database.
+  window.addEventListener("m2n:transcript-updated", () => {
+    if (activeTranscriptionId && lastDetail?.transcription?.meeting_id === (currentMeeting?.id ?? meetingId)) {
+      void selectTranscription(activeTranscriptionId);
+    }
+  });
 
   document.querySelector("#follow-playback")?.addEventListener("click", () => {
     followPlayback = !followPlayback;
